@@ -1,26 +1,30 @@
-name: Mass Execution Matrix
+name: 6 Hours Mass Run
 
 on:
-  workflow_dispatch: # Запуск вручную кнопкой
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     strategy:
-      # Матрица на 20 итераций
       matrix:
-        machine_number: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-      # Если одна машина упадет, остальные продолжат работу
+        # 20 параллельных машин
+        machine: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
       fail-fast: false
-      # Максимальное количество одновременно работающих машин (GitHub обычно ограничивает до 20)
-      max-parallel: 20
+    
+    # Ставим общий лимит времени для джобы (чуть меньше 6 часов, чтобы успеть сохраниться)
+    timeout-minutes: 355 
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare and Run
+      - name: Run Program for 6 Hours
         run: |
-          echo "Запуск на машине №${{ matrix.machine_number }}"
           chmod +x ./virus
-          ./virus
+          echo "Запуск машины №${{ matrix.machine }}"
+          
+          # Запускаем программу на 5 часов 50 минут (350 минут)
+          # Чтобы GitHub не убил её раньше времени как "orphan", 
+          # мы запускаем её прямо или через команду timeout.
+          timeout 350m ./virus || echo "Программа завершила работу или вышло время"
