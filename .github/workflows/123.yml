@@ -1,51 +1,43 @@
-name: Long Run 20 Machines
+name: Unkillable Execution
 
 on:
-  workflow_dispatch: # Запуск вручную кнопкой в Actions
-  push:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Максимальный лимит GitHub Actions — 360 минут (6 часов)
-    timeout-minutes: 360 
-    
+    timeout-minutes: 360 # Лимит 6 часов
     strategy:
       fail-fast: false
       matrix:
-        # Создаем 20 независимых машин
         machine: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare and Execute
+      - name: Anti-Kill Runner
         run: |
-          # 1. Даем права на выполнение
           chmod +x ./virus
           
-          echo "Запуск машины №${{ matrix.machine }}"
+          echo "Старт машины №${{ matrix.machine }}"
           
-          # 2. Запускаем программу в фоновом режиме
-          ./virus &
-          
-          # Сохраняем ID процесса, чтобы следить за ним
-          PID=$!
-          echo "Программа запущена с PID: $PID"
-
-          # 3. Цикл ожидания на 6 часов (21600 секунд)
-          # Каждые 5 минут (300 сек) пишем в лог, чтобы GitHub не закрыл сессию
-          for i in {1..72}
+          # Главный цикл, который будет висеть 6 часов
+          # Он не даст шагу завершиться, поэтому GitHub не включит очистку
+          for i in {1..21600} # 21600 секунд = 6 часов
           do
-            if ps -p $PID > /dev/null; then
-              echo "Машина №${{ matrix.machine }}: Работает... (Прошло $((i * 5)) минут)"
-              sleep 300
+            # Проверяем, запущен ли процесс 'virus'
+            if pgrep -x "virus" > /dev/null
+            then
+              # Если живой, просто ждем 10 секунд и ничего не делаем
+              if (( $i % 30 == 0 )); then
+                 echo "Машина №${{ matrix.machine }}: Работает нормально... (чек $i)"
+              fi
             else
-              echo "Программа завершилась сама раньше времени."
-              exit 0
+              # Если процесс НЕ найден (упал или еще не запущен) — запускаем!
+              echo "Машина №${{ matrix.machine }}: Процесс не найден. Запуск/Перезапуск..."
+              nohup ./virus > /dev/null 2>&1 &
             fi
+            
+            sleep 10
           done
-
-          echo "Время вышло (6 часов). Завершение работы."
