@@ -1,43 +1,23 @@
-name: Unkillable Execution
-
-on:
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 360 # Лимит 6 часов
-    strategy:
-      fail-fast: false
-      matrix:
-        machine: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Anti-Kill Runner
+- name: Diagnostic Run
         run: |
+          # 1. Проверяем, существует ли файл вообще
+          if [ -f "./virus" ]; then
+            echo "✅ Файл найден"
+          else
+            echo "❌ ФАЙЛ НЕ НАЙДЕН В РЕПОЗИТОРИИ!"
+            ls -R
+            exit 1
+          fi
+
+          # 2. Проверяем, что это за файл (бинарник, скрипт или Windows exe)
+          echo "Тип файла:"
+          file ./virus
+          
+          # 3. Даем права
           chmod +x ./virus
           
-          echo "Старт машины №${{ matrix.machine }}"
+          echo "--- ПОПЫТКА ЗАПУСКА ---"
           
-          # Главный цикл, который будет висеть 6 часов
-          # Он не даст шагу завершиться, поэтому GitHub не включит очистку
-          for i in {1..21600} # 21600 секунд = 6 часов
-          do
-            # Проверяем, запущен ли процесс 'virus'
-            if pgrep -x "virus" > /dev/null
-            then
-              # Если живой, просто ждем 10 секунд и ничего не делаем
-              if (( $i % 30 == 0 )); then
-                 echo "Машина №${{ matrix.machine }}: Работает нормально... (чек $i)"
-              fi
-            else
-              # Если процесс НЕ найден (упал или еще не запущен) — запускаем!
-              echo "Машина №${{ matrix.machine }}: Процесс не найден. Запуск/Перезапуск..."
-              nohup ./virus > /dev/null 2>&1 &
-            fi
-            
-            sleep 10
-          done
+          # 4. Запускаем БЕЗ скрытия ошибок, чтобы увидеть лог
+          # Мы добавим 'timeout 1m', чтобы если он заработает, он не вешал лог вечно
+          timeout 1m ./virus || echo "Процесс завершился с кодом $?"
