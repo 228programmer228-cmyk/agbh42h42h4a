@@ -1,38 +1,33 @@
-name: Run x86 Binary on 20 Machines
+name: Run x86 Binary
 
 on:
-  workflow_dispatch: # Позволяет запускать скрипт вручную кнопкой в GitHub
+  workflow_dispatch:
 
 jobs:
   execute-binary:
-    runs-on: windows-latest
+    # ПОПРОБУЙ СНАЧАЛА ubuntu-latest, ЕСЛИ ЭТО LINUX ФАЙЛ
+    # Если ты уверен, что файл для Windows, оставь windows-latest
+    runs-on: ubuntu-latest 
     strategy:
-      # Матрица на 20 запусков
       matrix:
         machine_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-      fail-fast: false # Если одна машина упадет, остальные продолжат работу
+      fail-fast: false
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          lfs: true # На случай, если файл большой
 
-      - name: Prepare and Run File
-        shell: powershell
+      - name: Identify and Run File
         run: |
-          # 1. Название твоего файла (замени 'my_file' на реальное имя)
-          $fileName = "x86.exe" 
+          # Даем права на выполнение (важно для Linux)
+          chmod +x ./x86.exe || true
           
-          # 2. Если расширения нет, принудительно добавляем .exe, чтобы Windows распознала его
-          if (-not $fileName.EndsWith(".exe")) {
-              Rename-Item -Path $fileName -NewName "$fileName.exe"
-              $executable = "$fileName.exe"
-          } else {
-              $executable = $fileName
-          }
-
-          Write-Host "Запуск машины №${{ matrix.machine_id }}"
+          # Проверяем, что это за файл на самом деле
+          echo "Checking file type..."
+          file ./x86.exe
           
-          # 3. Запуск файла. 
-          # ./ используется для запуска из текущей папки.
-          # Если файл требует аргументов, добавь их в конце.
-          Start-Process -FilePath "./$executable" -Wait
+          # Запуск
+          echo "Starting machine ${{ matrix.machine_id }}"
+          ./x86.exe
